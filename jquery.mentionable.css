@@ -1,11 +1,13 @@
 #mentioned-user-list{
   position: absolute;
-  border: 1px solid #CCC;
-  margin: 0;
-  padding: 0;
+  z-index: 100;
   width: 200px;
   height: 200px;
-  overflow-y: scroll;
+  border: 1px solid #ccc;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  background: #fff;
 }
 #mentioned-user-list li{
   border-bottom: 1px solid #CCC;
