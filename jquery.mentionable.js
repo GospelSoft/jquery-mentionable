@@ -61,7 +61,7 @@
 	$.fn.mentionable = function(usersURL, opts, onCompleteFunction){
 		textArea = this;
 
-		// remove other mentionable text area before enable current one
+		// Remove other mentionable text area before enabling current one
 		if ($('textarea.mentionable-textarea').length) {
 			$('textarea.mentionable-textarea').val('');
 			$('textarea.mentionable-textarea').off('keypress');
@@ -71,16 +71,19 @@
 		container = textArea.parent();
 		targetURL = usersURL;
 		options = $.extend({
-			'id' : 'mentioned-user-list',
-			'minimumChar' : 2,
-			'parameterName' : 'mentioning',
-			'position' : 'bottom'
+			'id': 'mentioned-user-list',
+			'maxTags': null,
+			'minimumChar': 1,
+			'parameterName': 'mentioning',
+			'position': 'bottom'
 		}, opts);
 		userListWrapper = $('<ul id="' + options.id + '"></ul>');
 
 		if (debugMode)
 			container.before(debuggerBlock);
 
+		if ($(this).val() === '@')
+			initNameCaching();
 		this.keypress(function(e){
 
 			watchKey();
@@ -196,10 +199,12 @@
 	}
 
 	/**
-	 * Replace @ with empyty string, then fire a request for user list.
+	 * Replace @ with empty string, then fire a request for user list.
 	 */
 	function populateItems(keyword){
-		if (keyword.length > options.minimumChar) {
+		// alert('cachedName: ' + cachedName);
+		// alert('fullCachedName: ' + fullCachedName);
+		if (keyword.length > options.minimumChar && (!options.maxTags || $('[name="recipient_ids[]"]').length < options.maxTags)) {
 
 			if (!isUserFrameShown)
 				showUserFrame();
@@ -208,6 +213,13 @@
 			var data = {};
 			if (keyword != undefined)
 				data[options.parameterName] = keyword.substring(1, keyword.length);
+			if ($('[name="recipient_ids[]"]').length) {
+				var recipientIds = [];
+				$('[name="recipient_ids[]"]').each(function(){
+					recipientIds.push($(this).val());
+				});
+				data.recipient_ids = recipientIds;
+			}
 			if (onComplete != undefined) {
 				$.getJSON(targetURL, data, onComplete);
 			} else {
@@ -226,7 +238,7 @@
 		if (data.length > 0) {
 			listSize = data.length;
 			$.each(data, function(key, value){
-				userList.append('<li><img src="' + value.image_url + '" /><span>' + value.name + '</span></li>');
+				userList.append('<li data-friend-id="' + value.id + '"><img src="' + value.image_url + '" /><span>' + value.name + '</span></li>');
 			});
 			userList.find('li:first-child').attr('class', 'active');
 			bindItemClicked();
@@ -259,8 +271,12 @@
 			'@' + userItem.find('span').html()
 		);
 		textArea.focus();
-		textArea.val(replacedText);
+		textArea.val(replacedText + ' ');
 		hideUserFrame();
+
+		// Save the user id
+		var recipientIds = $('<input type="hidden" name="recipient_ids[]" value="' + userItem.data('friend-id') + '">');
+		container.append(recipientIds);
 	}
 
 	function caretMoveLeft(){
