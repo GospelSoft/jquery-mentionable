@@ -18,8 +18,7 @@
 	var targetURL            = null;
 	var onComplete           = null;
 	var options              = null;
-	var debugMode            = false;
-	var debuggerBlock        = '<div id="mentionable-debugger"></div'
+	var debuggerBlock        = '<div id="mentionable-debugger"></div>'
 	var caretStartPosition   = 0;
 	var keyRespondingTimeOut = null;
 	var keyRespondTime       = 500;
@@ -75,11 +74,12 @@
 			'maxTags': null,
 			'minimumChar': 1,
 			'parameterName': 'mentioning',
-			'position': 'bottom'
+			'position': 'bottom',
+			'debugMode': false,
 		}, opts);
 		userListWrapper = $('<ul id="' + options.id + '"></ul>');
 
-		if (debugMode)
+		if (options.debugMode)
 			container.before(debuggerBlock);
 
 		if ($(this).val() === '@')
@@ -103,7 +103,7 @@
 					hideUserFrame();
 					break;
 				default:
-					// Firefox hacked!
+					// Firefox hack
 					// There is a problem on FF that @'s keycode returns 0.
 					// The case KEY.ATSIGN fails to catch, so we need to do it here instead
 					if (String.fromCharCode(e.charCode) == '@') {
@@ -118,14 +118,32 @@
 			// If user typed any letter while the caret is not at the end
 			// completely remove the string behind the caret.
 			fullCachedName = cachedName;
+			debug();
 		});
 		this.keyup(function(e){
 			switch (e.keyCode) {
+				// Delete or Backspace key is pressed
 				case KEY.DELETE:
 				case KEY.BACKSPACE:
-					// delete or backspace key is pressed
-					cachedName = cachedName.substring(0, cachedName.length -1);
-					fullCachedName = cachedName;
+					// If deleting back into a mention, reset name caching
+					var bDeleteExisting = false;
+					$('[name="recipient_ids[]"]').each(function(){
+						var iStrposStart = $(this).data('strpos-start');
+						var iStrposEnd = $(this).data('strpos-end');
+						if (iStrposStart <= currentCaretPosition() && iStrposEnd >= currentCaretPosition()) {
+							caretStartPosition = iStrposStart;
+							cachedName = textArea.val().substring(iStrposStart, currentCaretPosition());
+							fullCachedName = textArea.val().substring(iStrposStart, iStrposEnd);
+							bDeleteExisting = true;
+							$(this).remove();
+							return false;
+						}
+					});
+					// Refresh AJAX request
+					if (!bDeleteExisting) {
+						cachedName = cachedName.substring(0, cachedName.length -1);
+						fullCachedName = cachedName;
+					}
 					if (cachedName == '')
 						hideUserFrame();
 					else
@@ -149,6 +167,7 @@
 					caretMoveDown();
 					break;
 			}
+			debug();
 		});
 	};
 
@@ -200,10 +219,10 @@
 
 	/**
 	 * Replace @ with empty string, then fire a request for user list.
+	 *
+	 * @param string keyword
 	 */
 	function populateItems(keyword){
-		// alert('cachedName: ' + cachedName);
-		// alert('fullCachedName: ' + fullCachedName);
 		if (keyword.length > options.minimumChar && (!options.maxTags || $('[name="recipient_ids[]"]').length < options.maxTags)) {
 
 			if (!isUserFrameShown)
@@ -233,6 +252,8 @@
 
 	/**
 	 * Fill user name and image as a list item in user list block.
+	 *
+	 * @param object data
 	 */
 	function fillItems(data){
 		if (data.length > 0) {
@@ -261,6 +282,8 @@
 	/**
 	 * Perform a user selection by adding the selected user name
 	 * to the text area.
+	 *
+	 * @param element userItem
 	 */
 	function selectUser(userItem){
 		inputText = textArea.val();
@@ -275,7 +298,10 @@
 		hideUserFrame();
 
 		// Save the user id
-		var recipientIds = $('<input type="hidden" name="recipient_ids[]" value="' + userItem.data('friend-id') + '">');
+		var iStart = textArea.val().substring(0, currentCaretPosition()).lastIndexOf('@'); // @todo use caretStartPosition from a few lines up?
+		var iEnd = iStart + userItem.children('span').text().length;
+		var recipientIds = $('<input type="hidden" name="recipient_ids[]" value="' + userItem.data('friend-id')
+			+ '" data-strpos-start="' + iStart + '" data-strpos-end="' + iEnd + '">');
 		container.append(recipientIds);
 	}
 
@@ -321,8 +347,11 @@
 	}
 
 	function debug(){
-		myDebugger = $('#mentionable-debugger');
-		myDebugger.html('<b>cache : </b>' + cachedName + ' | <b>full cache : </b>' + fullCachedName);
+		if (options.debugMode) {
+			$('#mentionable-debugger').html(
+				'<b>cache : </b>' + cachedName + ' | <b>full cache : </b>' + fullCachedName
+			);
+		}
 	}
 
 	/**
@@ -336,10 +365,10 @@
 	/**
 	 * Replace a part of originalString from [from] to [to] position with addedString.
 	 *
-	 * param from               An integer of a begining position
-	 * param to                 An itenger of an ending position
-	 * param originalString     An original string to be partialy replaced
-	 * param addedString        A string to be replaced
+	 * @param from An integer of a begining position
+	 * @param to An itenger of an ending position
+	 * @param originalString An original string to be partialy replaced
+	 * @param addedString A string to be replaced
 	 */
 	function replaceString(from, to, originalString, addedString){
 		try {
