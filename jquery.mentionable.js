@@ -7,23 +7,23 @@
  * Forked from https://github.com/oozou/jquery-mentionable
  */
 (function( $ ) {
-	var cachedName           = '';
-	var fullCachedName       = '';
-	var mentioningUser       = false;
-	var textArea             = null;
-	var container            = null;
-	var userListWrapper      = $('<ul id="mentioned-user-list"></ul>');
-	var userList             = null;
-	var inputText            = null;
-	var targetURL            = null;
-	var onComplete           = null;
-	var options              = null;
-	var debuggerBlock        = '<div id="mentionable-debugger"></div>'
-	var caretStartPosition   = 0;
-	var keyRespondingTimeOut = null;
-	var keyRespondTime       = 500;
-	var listSize             = 0;
-	var isUserFrameShown     = false;
+	var bDeleteExisting       = false;
+	var bIsUserFrameShown     = false;
+	var bMentioningUser       = false;
+	var eContainer            = null;
+	var eTextArea             = null;
+	var eUserList             = null;
+	var eUserListWrapper      = $('<ul id="mentioned-user-list"></ul>');
+	var fnOnComplete          = null;
+	var iCaretStartPosition   = 0;
+	var iCaretEndPosition     = 0;
+	var iKeyRespondingTimeOut = null;
+	var iListSize             = 0;
+	var oOptions              = null;
+	var strCachedName         = '';
+	var strFullCachedName     = '';
+	var strInputText          = null;
+	var strTargetUrl          = null;
 
 	var KEY = {
 		BACKSPACE:    8,
@@ -48,17 +48,17 @@
 	/**
 	 * Make a textarea support user mentioning.
 	 *
-	 * param usersURL             A url to fire an ajax call to retrieve user list.
-	 * param opts                 Options:
-	 *                              (id) the id of the user list block.
-	 *                              (minimumChar) the minimum number of character to trigger user data retrieval
-	 *                              (parameterName) the query parameter name
-	 *                              (position) the position of the list (right, bottom, left)
-	 * param onCompleteFunction   A callback function when user list is retrieved. Expected to be a user item generation.
+	 * param strUsersUrl   A url to fire an ajax call to retrieve user list.
+	 * param oOpts         Options:
+	 *                         (id) the id of the user list block.
+	 *                         (minimumChar) the minimum number of character to trigger user data retrieval
+	 *                         (parameterName) the query parameter name
+	 *                         (position) the position of the list (right, bottom, left)
+	 * param fnOnComplete  A callback function when user list is retrieved. Expected to be a user item generation.
 	 *
 	 */
-	$.fn.mentionable = function(usersURL, opts, onCompleteFunction){
-		textArea = this;
+	$.fn.mentionable = function(strUsersUrl, oOpts, fnOnComplete){
+		eTextArea = this;
 
 		// Remove other mentionable text area before enabling current one
 		if ($('textarea.mentionable-textarea').length) {
@@ -67,20 +67,20 @@
 			$('textarea.mentionable-textarea').off('keyup');
 		}
 
-		container = textArea.parent();
-		targetURL = usersURL;
-		options = $.extend({
+		eContainer = eTextArea.parent();
+		strTargetUrl = strUsersUrl;
+		oOptions = $.extend({
 			'id': 'mentioned-user-list',
 			'maxTags': null,
 			'minimumChar': 1,
 			'parameterName': 'mentioning',
 			'position': 'bottom',
 			'debugMode': false,
-		}, opts);
-		userListWrapper = $('<ul id="' + options.id + '"></ul>');
+		}, oOpts);
+		eUserListWrapper = $('<ul id="' + oOptions.id + '"></ul>');
 
-		if (options.debugMode)
-			container.before(debuggerBlock);
+		if (oOptions.debugMode)
+			eContainer.before('<div id="mentionable-debugger"></div>');
 
 		if ($(this).val() === '@')
 			initNameCaching();
@@ -93,8 +93,8 @@
 					initNameCaching();
 					break;
 				case KEY.ENTER:
-					if (mentioningUser) {
-						selectUser(userList.find('li.active'));
+					if (bMentioningUser) {
+						selectUser(eUserList.find('li.active'));
 						e.preventDefault();
 					}
 					hideUserFrame();
@@ -110,41 +110,54 @@
 						initNameCaching();
 					} else {
 						// append pressed character to cache
-						if (cachedName != '')
-							cachedName += String.fromCharCode(e.charCode);
+						if (strCachedName != '')
+							strCachedName += String.fromCharCode(e.charCode);
 					}
 			}
 
 			// If user typed any letter while the caret is not at the end
 			// completely remove the string behind the caret.
-			fullCachedName = cachedName;
+			strFullCachedName = strCachedName;
 			debug();
 		});
-		this.keyup(function(e){
+		this.keydown(function(e){
 			switch (e.keyCode) {
-				// Delete or Backspace key is pressed
 				case KEY.DELETE:
 				case KEY.BACKSPACE:
 					// If deleting back into a mention, reset name caching
-					var bDeleteExisting = false;
 					$('[name="recipient_ids[]"]').each(function(){
-						var iStrposStart = $(this).data('strpos-start');
-						var iStrposEnd = $(this).data('strpos-end');
+						var iStrposStart = parseInt($(this).attr('data-strpos-start')); // using attr() b/c data() is unwritable
+						var iStrposEnd = parseInt($(this).attr('data-strpos-end'));
+						// Remove the one being deleted
 						if (iStrposStart <= currentCaretPosition() && iStrposEnd >= currentCaretPosition()) {
-							caretStartPosition = iStrposStart;
-							cachedName = textArea.val().substring(iStrposStart, currentCaretPosition());
-							fullCachedName = textArea.val().substring(iStrposStart, iStrposEnd);
+							iCaretStartPosition = iStrposStart;
+							iCaretEndPosition = iStrposEnd;
 							bDeleteExisting = true;
-							$(this).remove();
-							return false;
+							$(this).attr('data-strpos-end', iStrposEnd - 1);
+							$(this).prop('disabled', true);
+						// Adjust start & end for those following
+						} else if (iStrposStart > currentCaretPosition()) {
+							$(this).attr('data-strpos-start', iStrposStart - 1);
+							$(this).attr('data-strpos-end', iStrposEnd - 1);
 						}
 					});
-					// Refresh AJAX request
-					if (!bDeleteExisting) {
-						cachedName = cachedName.substring(0, cachedName.length -1);
-						fullCachedName = cachedName;
+					break;
+			}
+		});
+		this.keyup(function(e){
+			switch (e.keyCode) {
+				case KEY.DELETE:
+				case KEY.BACKSPACE:
+					if (bDeleteExisting) {
+						strCachedName = eTextArea.val().substring(iCaretStartPosition, currentCaretPosition());
+						strFullCachedName = eTextArea.val().substring(iCaretStartPosition, iCaretEndPosition);
+					} else {
+						strCachedName = strCachedName.substring(0, strCachedName.length - 1);
+						strFullCachedName = strCachedName;
 					}
-					if (cachedName == '')
+					//bDeleteExisting = false;
+					//remove disabled input
+					if ('' == strCachedName)
 						hideUserFrame();
 					else
 						watchKey();
@@ -175,21 +188,21 @@
 	 * Initialize a cache that store the user name that is being mentioned.
 	 */
 	function initNameCaching(){
-		caretStartPosition = currentCaretPosition();
-		cachedName = '@';
+		iCaretStartPosition = currentCaretPosition();
+		strCachedName = '@';
 	}
 
 	/**
 	 * Hide the user list frame, and clear some related stuffs.
 	 */
 	function hideUserFrame(){
-		cachedName = '';
-		fullCachedName = '';
-		listSize = 0;
-		mentioningUser = false;
-		if (isUserFrameShown) {
-			userList.remove();
-			isUserFrameShown = false;
+		strCachedName = '';
+		strFullCachedName = '';
+		iListSize = 0;
+		bMentioningUser = false;
+		if (bIsUserFrameShown) {
+			eUserList.remove();
+			bIsUserFrameShown = false;
 		}
 	}
 
@@ -197,55 +210,52 @@
 	 * Show the user list frame.
 	 */
 	function showUserFrame(){
-		container.append(userListWrapper);
-		mentioningUser = true;
+		eContainer.append(eUserListWrapper);
+		bMentioningUser = true;
 
-		userList = $('#' + options.id);
-		if (options.position == 'left') {
-			userList.css('left', -1 * userList.outerWidth());
-			userList.css('top', 0);
-		} else if (options.position == 'right') {
-			userList.css('left', textArea.outerWidth());
-			userList.css('top', 0);
-		} else if (options.position == 'bottom') {
-			userList.css('left', 0);
-			userList.css('top', textArea.outerHeight());
-			userList.css('width', textArea.outerWidth());
+		eUserList = $('#' + oOptions.id);
+		if (oOptions.position == 'left') {
+			eUserList.css('left', -1 * eUserList.outerWidth());
+			eUserList.css('top', 0);
+		} else if (oOptions.position == 'right') {
+			eUserList.css('left', eTextArea.outerWidth());
+			eUserList.css('top', 0);
+		} else if (oOptions.position == 'bottom') {
+			eUserList.css('left', 0);
+			eUserList.css('top', eTextArea.outerHeight());
+			eUserList.css('width', eTextArea.outerWidth());
 		}
 
-		userList.show();
-		isUserFrameShown = true;
+		eUserList.show();
+		bIsUserFrameShown = true;
 	}
 
 	/**
 	 * Replace @ with empty string, then fire a request for user list.
 	 *
-	 * @param string keyword
+	 * @param string strKeyword
 	 */
-	function populateItems(keyword){
-		if (keyword.length > options.minimumChar && (!options.maxTags || $('[name="recipient_ids[]"]').length < options.maxTags)) {
+	function populateItems(strKeyword){
+		if (strKeyword.length > oOptions.minimumChar && (!oOptions.maxTags || $('[name="recipient_ids[]"]').length < oOptions.maxTags)) {
 
-			if (!isUserFrameShown)
+			if (!bIsUserFrameShown)
 				showUserFrame();
 
-			userList.html('');
-			var data = {};
-			if (keyword != undefined)
-				data[options.parameterName] = keyword.substring(1, keyword.length);
+			eUserList.html('');
+			var oData = {};
+			if (strKeyword != undefined)
+				oData[oOptions.parameterName] = strKeyword.substring(1, strKeyword.length);
 			if ($('[name="recipient_ids[]"]').length) {
-				var recipientIds = [];
+				var aRecipientIds = [];
 				$('[name="recipient_ids[]"]').each(function(){
-					recipientIds.push($(this).val());
+					if (!$(this).prop('disabled'))
+						aRecipientIds.push($(this).val());
 				});
-				data.recipient_ids = recipientIds;
+				oData.recipient_ids = aRecipientIds;
 			}
-			if (onComplete != undefined) {
-				$.getJSON(targetURL, data, onComplete);
-			} else {
-				$.getJSON(targetURL, data, function(data){
-					fillItems(data);
-				});
-			}
+			if (fnOnComplete == undefined)
+				fnOnComplete = function(oData){ fillItems(oData); }
+			$.getJSON(strTargetUrl, oData, fnOnComplete);
 			bindItemClicked();
 		}
 	}
@@ -253,18 +263,20 @@
 	/**
 	 * Fill user name and image as a list item in user list block.
 	 *
-	 * @param object data
+	 * @param object oData
 	 */
-	function fillItems(data){
-		if (data.length > 0) {
-			listSize = data.length;
-			$.each(data, function(key, value){
-				userList.append('<li data-friend-id="' + value.id + '"><img src="' + value.image_url + '" /><span>' + value.name + '</span></li>');
+	function fillItems(oData){
+		if (oData.length > 0) {
+			iListSize = oData.length;
+			$.each(oData, function(iKey, oValue){
+				eUserList.append('<li data-friend-id="' + oValue.id
+					+ '"><img src="' + oValue.image_url + '"><span>'
+					+ oValue.name + '</span></li>');
 			});
-			userList.find('li:first-child').attr('class', 'active');
+			eUserList.find('li:first-child').attr('class', 'active');
 			bindItemClicked();
 		} else {
-			userList.append('<li>No user found</li>');
+			eUserList.append('<li>No user found</li>');
 		}
 	}
 
@@ -273,8 +285,8 @@
 	 */
 	function bindItemClicked(){
 		// Handle when user item is clicked
-		var userListItems = userList.find('li');
-		userListItems.click(function(){
+		var eUserListItems = eUserList.find('li');
+		eUserListItems.click(function(){
 			selectUser($(this));
 		});
 	}
@@ -283,73 +295,85 @@
 	 * Perform a user selection by adding the selected user name
 	 * to the text area.
 	 *
-	 * @param element userItem
+	 * @param element eUserItem
 	 */
-	function selectUser(userItem){
-		inputText = textArea.val();
-		replacedText = replaceString(
-			caretStartPosition,
-			caretStartPosition + fullCachedName.length,
-			inputText,
-			'@' + userItem.find('span').html()
+	function selectUser(eUserItem){
+		var strUserName = eUserItem.find('span').text();
+		strInputText = eTextArea.val();
+		strReplacedText = replaceString(
+			iCaretStartPosition,
+			iCaretStartPosition + strFullCachedName.length,
+			strInputText,
+			'@' + strUserName
 		);
-		textArea.focus();
-		textArea.val(replacedText + ' ');
-		hideUserFrame();
+		eTextArea.focus();
+		eTextArea.val(strReplacedText.trim() + ' ');
+
+		// Update position of following mentions
+		$('[name="recipient_ids[]"]').each(function(){
+			var iStrposStart = parseInt($(this).attr('data-strpos-start')); // using attr() b/c data() is unwritable
+			var iStrposEnd = parseInt($(this).attr('data-strpos-end'));
+			if (iStrposStart > iCaretStartPosition + strFullCachedName.length) {
+				var iDiff = strUserName.length + 1 - strFullCachedName.length; // "+ 1" accounts for @ symbol
+				$(this).attr('data-strpos-start', iStrposStart + iDiff);
+				$(this).attr('data-strpos-end', iStrposEnd + iDiff);
+			}
+		});
 
 		// Save the user id
-		var iStart = textArea.val().substring(0, currentCaretPosition()).lastIndexOf('@'); // @todo use caretStartPosition from a few lines up?
-		var iEnd = iStart + userItem.children('span').text().length;
-		var recipientIds = $('<input type="hidden" name="recipient_ids[]" value="' + userItem.data('friend-id')
-			+ '" data-strpos-start="' + iStart + '" data-strpos-end="' + iEnd + '">');
-		container.append(recipientIds);
+		$('[name="recipient_ids[]"][value="' + eUserItem.data('friend-id') + '"]').remove();
+		var eRecipientIds = $('<input type="hidden" name="recipient_ids[]" value="' + eUserItem.data('friend-id')
+			+ '" data-strpos-start="' + iCaretStartPosition + '" data-strpos-end="' + (iCaretStartPosition + strUserName.length) + '">');
+		eContainer.append(eRecipientIds);
+
+		hideUserFrame();
 	}
 
 	function caretMoveLeft(){
-		if (mentioningUser) {
-			// Remove last char from cachedName while maintaining the fullCachedName
-			if (cachedName != '@')
-				cachedName = fullCachedName.substring(0, cachedName.length - 1);
+		if (bMentioningUser) {
+			// Remove last char from strCachedName while maintaining the strFullCachedName
+			if (strCachedName != '@')
+				strCachedName = strFullCachedName.substring(0, strCachedName.length - 1);
 			else
 				hideUserFrame();
 		}
 	}
 
 	function caretMoveRight(){
-		if (mentioningUser) {
-			if (cachedName == fullCachedName) {
+		if (bMentioningUser) {
+			if (strCachedName == strFullCachedName) {
 				hideUserFrame();
 			} else {
-				// Append to the tail the next character retrieved from fullCachedName
-				cachedName = fullCachedName.substring(0, cachedName.length + 1);
+				// Append to the tail the next character retrieved from strFullCachedName
+				strCachedName = strFullCachedName.substring(0, strCachedName.length + 1);
 			}
 		}
 	}
 
 	function caretMoveUp(){
-		currentUserItem = userList.find('li.active');
-		if (currentUserItem.index() != 0) {
-			previousUserItem = currentUserItem.prev();
-			currentUserItem.attr('class', '');
-			previousUserItem.attr('class', 'active');
-			userList.scrollTop(previousUserItem.index() * previousUserItem.outerHeight());
+		eCurrentUserItem = eUserList.find('li.active');
+		if (eCurrentUserItem.index() != 0) {
+			ePreviousUserItem = eCurrentUserItem.prev();
+			eCurrentUserItem.attr('class', '');
+			ePreviousUserItem.attr('class', 'active');
+			eUserList.scrollTop(ePreviousUserItem.index() * ePreviousUserItem.outerHeight());
 		}
 	}
 
 	function caretMoveDown(){
-		currentUserItem = userList.find('li.active');
-		if (currentUserItem.index() != listSize-1) {
-			nextUserItem = currentUserItem.next();
-			currentUserItem.attr('class', '');
-			nextUserItem.attr('class', 'active');
-			userList.scrollTop(nextUserItem.index() * nextUserItem.outerHeight());
+		eCurrentUserItem = eUserList.find('li.active');
+		if (eCurrentUserItem.index() != iListSize - 1) {
+			eNextUserItem = eCurrentUserItem.next();
+			eCurrentUserItem.attr('class', '');
+			eNextUserItem.attr('class', 'active');
+			eUserList.scrollTop(eNextUserItem.index() * eNextUserItem.outerHeight());
 		}
 	}
 
 	function debug(){
-		if (options.debugMode) {
+		if (oOptions.debugMode) {
 			$('#mentionable-debugger').html(
-				'<b>cache : </b>' + cachedName + ' | <b>full cache : </b>' + fullCachedName
+				'<b>cache :</b> ' + strCachedName + ' | <b>full cache :</b> ' + strFullCachedName
 			);
 		}
 	}
@@ -358,29 +382,28 @@
 	 * Return an integer of a curret caret position.
 	 */
 	function currentCaretPosition(){
-		caretContainer = textArea[0];
-		return caretContainer.selectionStart;
+		return eTextArea[0].selectionStart;
 	}
 
 	/**
-	 * Replace a part of originalString from [from] to [to] position with addedString.
+	 * Replace a part of strOriginal from [iFrom] to [iTo] position with strAdded.
 	 *
-	 * @param from An integer of a begining position
-	 * @param to An itenger of an ending position
-	 * @param originalString An original string to be partialy replaced
-	 * @param addedString A string to be replaced
+	 * @param iFrom An integer of a begining position
+	 * @param iTo An itenger of an ending position
+	 * @param strOriginal An original string to be partialy replaced
+	 * @param strAdded A string to be replaced
 	 */
-	function replaceString(from, to, originalString, addedString){
+	function replaceString(iFrom, iTo, strOriginal, strAdded){
 		try {
-			if (from == 0)
-				return addedString + originalString.substring(to, originalString.length);
-			if (from != 0) {
-				firstChunk = originalString.substring(0, from);
-				lastChunk = originalString.substring(to, originalString.length);
-				return firstChunk + addedString + lastChunk;
+			if (0 == iFrom) {
+				return strAdded + strOriginal.substring(iTo, strOriginal.length);
+			} else {
+				strFirstChunk = strOriginal.substring(0, iFrom);
+				strLastChunk = strOriginal.substring(iTo, strOriginal.length);
+				return strFirstChunk + strAdded + strLastChunk;
 			}
 		} catch (error) {
-			return originalString;
+			return strOriginal;
 		}
 	}
 
@@ -390,12 +413,12 @@
 	 * it will fire poplateItems()
 	 */
 	function watchKey(){
-		clearTimeout(keyRespondingTimeOut);
-		keyRespondingTimeOut = setTimeout(
+		clearTimeout(iKeyRespondingTimeOut);
+		iKeyRespondingTimeOut = setTimeout(
 			function(){
-				populateItems(cachedName);
+				populateItems(strCachedName);
 			},
-			keyRespondTime
+			500
 		);
 	}
 
@@ -403,7 +426,7 @@
 	 * Return a jQuery object of the user list item that is in an active state.
 	 */
 	function activeUserItemIndex(){
-		return userList.find('li.active').index();
+		return eUserList.find('li.active').index();
 	}
 
 })( jQuery );
