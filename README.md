@@ -1,51 +1,67 @@
 # jQuery Mentionable
-**Enable the user to mention other people by typing @**
+**Enable the user to mention other people by typing "@"**
 
 jQuey Mentionable is the plugin that enables the user to mention other poeple after
-typing '@' in the textarea. The example of jquery-mentionable can be found
+typing '@' in the textarea.
+<!---
+@todo
+The example of jquery-mentionable can be found
 [here](http://jquery-mentionable.ap01.aws.af.cm)
+-->
 
 ## Requirements
-You need to have a url that, when it is called, returns a list of user in json format.
-When the user types a name after @, jquery.mentionable will make an ajax call to that
-url, and parse a typed name as a query param 'mentioning'. For instance, if the url
+You need to have a URL that, when it is called, returns a list of users in JSON format.
+When the user types a name after @, jquery.mentionable will make an AJAX call to that
+URL, and pass the typed name as a query param 'mentioning'. For instance, if the URL
 is http://localhost/users.json, when the user types '@tai', jquery.mentionable will fire
-a request to *http://localhost/users.json?mentioning=tai*. The expected json should look
-like this.
+a request to *http://localhost/users.json?mentioning=tai*. The expected JSON should look
+like this:
 ```json
 [{"created_at":"2012-08-15T16:07:30Z","id":1,"image_url":"/assets/u1.png","name":"taiko","updated_at":"2012-08-15T16:26:35Z"},{"created_at":"2012-08-15T16:15:59Z","id":2,"image_url":"/assets/u2.png","name":"Kiera Harber","updated_at":"2012-08-15T16:15:59Z"}]
 ```
 
 jquery.mentionable has a built-in callback that will populate the
-user list for you after ajax call is success. The only thing you
-need to do is to ensure that the returned json is an array of user object
-where each object has *name* and *image_url* fields. You can also
-supply the callback function by yourself if there is more logic
-you want to do.
+user list for you after the AJAX call succeeds. The only thing you
+need to do is to ensure that the returned JSON is an array of user objects
+where each object has an *id*, *name*, and *image_url* field. You can also
+supply the callback function yourself if there is more logic
+you want to perform.
 
+*NOTE: The `created_at` and `updated_at` properties mentioned above are not currently used.*
 
 ## Usage
-First, include jquery and jquery.mentionable to your HTML.
+First, include jquery and jquery.mentionable in your HTML.
 ```html
 <script src='jquery.js'></script>
 <script src='jquery.mentionable.js'></script>
 <link href='jquery.mentionable.css' media="all" rel="stylesheet" type="text/css">
 ```
-Next, wrap a textarea with a div with relative positioning. If you did not wrap it
-this way, the position of user list will be out of control.
+Next, wrap a textarea with a relatively-positioned div. This ensures the user list
+is positioned correctly.
 ```html
 <div style="position:relative;">
   <textarea id="textarea"></textarea>
 </div>
 ```
-To make a textarea mentionable, in javascript, call mentionable method with a url string as its parameter.
+To make a textarea mentionable, in javascript, call the mentionable method with a URL string as its parameter.
 ```javascript
 $("#textarea").mentionable("user_list_url");
 ```
 The above code will use a default callback handle to populate the user list.
 
+After a mentionee is selected, jquery.mentionable creates a hidden input with the corresponding `id`
+(from the JSON response) so you can submit that data with your form:
+```html
+<input type="hidden" name="mentioned_id[]" value="13">
+```
+
 ## Configuring
-jquery.mentionable accepts three parameters which are usersURL, opts and onCompleteFunction respectively.
+jquery.mentionable accepts 3 parameters:
+
+* strUsersUrl
+* opts
+* fnOnComplete
+
 *usersURL* is, as stated above, a url for a user json collection. opts is an option object
 and onCompleteFunction is a function that will be triggered when the ajax called is completed.
 
@@ -57,25 +73,24 @@ $("#textarea").mentionable("user_list_url", null, function(){
 });
 ```
 There are also some options that you can parsed along
-* *id* : an id of the user list container .
-* *minimumChar* : a minimum number of characters required to trigger user fetching.
-* *parameterName* : a name of parameter to be parsed to the user list url
-* *position* : a position of user list: left, bottom, and right.
+* *id* : The HTML `id` attribute of the user list container. Default is `mentioned-user-list`
+* *maxTags* : Maximum number of users that can be tagged. Default is `null` (unlimited).
+* *minimumChar* : The minimum number of characters required to trigger user fetching. Default is `1`.
+* *parameterName* : The name of the parameter to be passed to the user list url. Default is `mentioning`.
+* *position* : The position of user list: left, bottom, or right. Default is `bottom`.
+* *debugMode* : A boolean switch to turn debug mode on/off. Debug mode shows you the `strCachedName` and `strFullCachedName` values in real time just above the textarea. Default is `false` (debugging off).
 
-The following example creates a mentionable text area which will parse a string via 'filter' query parameter when 3 or more characters are typed.
+The following example creates a mentionable textarea which will pass a string via 'filter' query parameter when 3 or more characters are typed.
 ```javascript
 $("#textarea").mentionable(
   "http://your/user/list/url",
   {minimumChar: 3, parameterName: "filter"}
 );
 ```
+
 ## Styling
 If you decided to customize the user list id, the base style of jquery-mentionable will not be applied. Please take a look at jquery-mentionable.css to explore the base style.
 
-
-## Todo
-* Rework on a base style, especially the hover and selection.
-* Enable the user to use other property name other than 'name' and 'image_url'.
-
-## Thank
-[Tanin Na Nakorn](https://github.com/tanin47) suggested how to solve the FF issue! Thank mate!
+## Credits
+Forked from a project by [Warut Surapat](https://github.com/swarut)
+[https://github.com/oozou/jquery-mentionable]
