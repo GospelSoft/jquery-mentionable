@@ -2,7 +2,7 @@
 **Enable the user to mention other people by typing "@"**
 
 jQuey Mentionable is a plugin that enables the user to mention other people after
-typing "@"" in the textarea, a la Twitter or Instagram.
+typing "@" in the textarea, a la Twitter or Instagram.
 <!---
 @todo
 The example of jquery-mentionable can be found
@@ -31,8 +31,8 @@ like this:
         "image_url":"/assets/u2.png",
         "created_at":"2012-08-15T16:15:59Z",
         "updated_at":"2012-08-15T16:15:59Z"
-    },
-    //...
+    }
+    ...
 ]
 ```
 
@@ -46,20 +46,20 @@ you want to perform.
 *NOTE: The `created_at` and `updated_at` properties mentioned above are not currently used.*
 
 ## Usage
-First, include jQuery and **jquery.mentionable** in your HTML.
+First, include jQuery and **jquery.mentionable** in your HTML:
 ```html
 <script src="jquery.js"></script>
 <script src="jquery.mentionable.js"></script>
 <link href="jquery.mentionable.css" media="all" rel="stylesheet" type="text/css">
 ```
 Next, wrap a textarea with a relatively-positioned `<div>`. This ensures the user list
-is positioned correctly.
+is positioned correctly:
 ```html
 <div style="position:relative;">
-  <textarea id="textarea"></textarea>
+    <textarea id="textarea"></textarea>
 </div>
 ```
-To make a textarea mentionable, in JavaScript, call the `.mentionable()` method with a URL string as its parameter.
+To make a textarea mentionable, in JavaScript, call the `.mentionable()` method with a URL string as its parameter:
 ```JavaScript
 $('#textarea').mentionable('http://localhost/users.json');
 ```
@@ -75,39 +75,39 @@ After a mentionee is selected, **jquery.mentionable** creates a hidden input wit
 
 **jquery.mentionable** accepts 3 parameters:
 
-#### `strUsersUrl`
-`strUsersUrl` is, as stated above, a URL for a user JSON collection.
+##### `strUsersUrl`
+`strUsersUrl` is, as stated above, a URL for a JSON collection of users.
 
-#### oOpts
+#### `oOpts`
 `oOpts` is an options object that accepts the following parameters:
-* `id` : The HTML `id` attribute of the user list container.
+* **`id`** : The HTML `id` attribute of the user list container.
   * Default: `mentioned-user-list`
-* `maxTags` : Maximum number of users that can be tagged.
+* **`maxTags`** : Maximum number of users that can be tagged.
   * Default: `null` (unlimited).
-* `minimumChar` : The minimum number of characters required to trigger user fetching.
+* **`minimumChar`** : The minimum number of characters required to trigger user fetching.
   * Default: `1`.
-* `parameterName` : The name of the parameter to be passed to the user list url.
+* **`parameterName`** : The name of the parameter to be passed to the user list url.
   * Default: `mentioning`.
-* `position` : The position of user list: left, bottom, or right.
+* **`position`** : The position of user list: left, bottom, or right.
   * Default: `bottom`.
-* `debugMode` : A boolean switch to turn debug mode on/off. Debug mode shows you the `strCachedName` and `strFullCachedName` values in real time just above the textarea.
+* **`debugMode`** : A boolean switch to turn debug mode on/off. Debug mode shows you the `strCachedName` and `strFullCachedName` values in real time just above the textarea.
   * Default: `false` (debugging off).
 
-The following example creates a mentionable textarea which will pass a string via 'filter' query parameter when 3 or more characters are typed.
+The following example creates a mentionable textarea which will pass a string via a `filter` query parameter when 3 or more characters are typed:
 ```JavaScript
 $('#textarea').mentionable(
-  'http://your/user/list/url',
-  {minimumChar: 3, parameterName: 'filter'}
+    'http://your/user/list/url',
+    {minimumChar: 3, parameterName: 'filter'}
 );
 ```
 
-#### fnOnComplete
+#### `fnOnComplete`
 `fnOnComplete` is a function that will be triggered when the AJAX call is successful.
 
-For instance, the following code will pop an alert box when the user list is loaded.
+For instance, the following code will pop an alert box when the user list is loaded:
 ```JavaScript
 $("#textarea").mentionable("user_list_url", null, function(){
-  alert("hello world"); // do what you want here
+    alert("hello world"); // do what you want here
 });
 ```
 
