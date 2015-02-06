@@ -32,7 +32,7 @@ like this:
         "created_at":"2012-08-15T16:15:59Z",
         "updated_at":"2012-08-15T16:15:59Z"
     }
-    ...
+    // ...
 ]
 ```
 
@@ -78,7 +78,7 @@ After a mentionee is selected, **jquery.mentionable** creates a hidden input wit
 ##### `strUsersUrl`
 `strUsersUrl` is, as stated above, a URL for a JSON collection of users.
 
-#### `oOpts`
+##### `oOpts`
 `oOpts` is an options object that accepts the following parameters:
 * **`id`** : The HTML `id` attribute of the user list container.
   * Default: `mentioned-user-list`
@@ -96,18 +96,18 @@ After a mentionee is selected, **jquery.mentionable** creates a hidden input wit
 The following example creates a mentionable textarea which will pass a string via a `filter` query parameter when 3 or more characters are typed:
 ```JavaScript
 $('#textarea').mentionable(
-    'http://your/user/list/url',
+    'http://localhost/users.json',
     {minimumChar: 3, parameterName: 'filter'}
 );
 ```
 
-#### `fnOnComplete`
+##### `fnOnComplete`
 `fnOnComplete` is a function that will be triggered when the AJAX call is successful.
 
 For instance, the following code will pop an alert box when the user list is loaded:
 ```JavaScript
-$("#textarea").mentionable("user_list_url", null, function(){
-    alert("hello world"); // do what you want here
+$('#textarea').mentionable('http://localhost/users.json', null, function(){
+    alert('Hello World!''); // do what you want here
 });
 ```
 
