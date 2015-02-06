@@ -125,7 +125,7 @@
 				case KEY.DELETE:
 				case KEY.BACKSPACE:
 					// If deleting back into a mention, reset name caching
-					$('[name="recipient_ids[]"]').each(function(){
+					$('[name="mentioned_id[]"]').each(function(){
 						var iStrposStart = parseInt($(this).attr('data-strpos-start')); // using attr() b/c data() is unwritable
 						var iStrposEnd = parseInt($(this).attr('data-strpos-end'));
 						// Remove the one being deleted
@@ -236,7 +236,7 @@
 	 * @param string strKeyword
 	 */
 	function populateItems(strKeyword){
-		if (strKeyword.length > oOptions.minimumChar && (!oOptions.maxTags || $('[name="recipient_ids[]"]').length < oOptions.maxTags)) {
+		if (strKeyword.length > oOptions.minimumChar && (!oOptions.maxTags || $('[name="mentioned_id[]"]').length < oOptions.maxTags)) {
 
 			if (!bIsUserFrameShown)
 				showUserFrame();
@@ -245,13 +245,13 @@
 			var oData = {};
 			if (strKeyword != undefined)
 				oData[oOptions.parameterName] = strKeyword.substring(1, strKeyword.length);
-			if ($('[name="recipient_ids[]"]').length) {
+			if ($('[name="mentioned_id[]"]').length) {
 				var aRecipientIds = [];
-				$('[name="recipient_ids[]"]').each(function(){
+				$('[name="mentioned_id[]"]').each(function(){
 					if (!$(this).prop('disabled'))
 						aRecipientIds.push($(this).val());
 				});
-				oData.recipient_ids = aRecipientIds;
+				oData.mentioned_id = aRecipientIds;
 			}
 			if (fnOnComplete == undefined)
 				fnOnComplete = function(oData){ fillItems(oData); }
@@ -310,7 +310,7 @@
 		eTextArea.val(strReplacedText.trim() + ' ');
 
 		// Update position of following mentions
-		$('[name="recipient_ids[]"]').each(function(){
+		$('[name="mentioned_id[]"]').each(function(){
 			var iStrposStart = parseInt($(this).attr('data-strpos-start')); // using attr() b/c data() is unwritable
 			var iStrposEnd = parseInt($(this).attr('data-strpos-end'));
 			if (iStrposStart > iCaretStartPosition + strFullCachedName.length) {
@@ -321,8 +321,8 @@
 		});
 
 		// Save the user id
-		$('[name="recipient_ids[]"][value="' + eUserItem.data('friend-id') + '"]').remove();
-		var eRecipientIds = $('<input type="hidden" name="recipient_ids[]" value="' + eUserItem.data('friend-id')
+		$('[name="mentioned_id[]"][value="' + eUserItem.data('friend-id') + '"]').remove();
+		var eRecipientIds = $('<input type="hidden" name="mentioned_id[]" value="' + eUserItem.data('friend-id')
 			+ '" data-strpos-start="' + iCaretStartPosition + '" data-strpos-end="' + (iCaretStartPosition + strUserName.length) + '">');
 		eContainer.append(eRecipientIds);
 
