@@ -31,8 +31,8 @@ like this:
         "image_url":"/assets/u2.png",
         "created_at":"2012-08-15T16:15:59Z",
         "updated_at":"2012-08-15T16:15:59Z"
-    }
-    // ...
+    },
+    ...
 ]
 ```
 
